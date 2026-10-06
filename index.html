@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b8f55">
+<title>Deezat Chat</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f7f6;color:#17211b}
+.app{max-width:520px;margin:auto;min-height:100vh;background:#fff;display:flex;flex-direction:column}
+header{background:#0b8f55;color:white;padding:18px 18px 14px;position:sticky;top:0;z-index:5}
+.brand{font-size:25px;font-weight:800}.tag{font-size:12px;opacity:.85;margin-top:3px}
+.search{margin-top:14px;background:#fff;border-radius:12px;padding:11px 13px;color:#777}
+main{flex:1;padding:10px 0 78px}.screen{display:none}.screen.active{display:block}
+.chat{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid #edf0ee;cursor:pointer}
+.avatar{width:50px;height:50px;border-radius:50%;background:#d8f3e6;color:#087b4a;display:grid;place-items:center;font-weight:800;font-size:18px;flex:none}
+.info{flex:1;min-width:0}.row{display:flex;justify-content:space-between;gap:8px}.name{font-weight:700}.time{font-size:11px;color:#89928d}.last{font-size:13px;color:#66716b;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{background:#0b8f55;color:white;border-radius:20px;min-width:20px;height:20px;display:grid;place-items:center;font-size:11px}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);height:66px;background:white;border-top:1px solid #e5e9e6;display:flex;z-index:10}
+.nav{flex:1;border:0;background:none;color:#78827d;font-size:11px}.nav.active{color:#0b8f55;font-weight:700}.nav b{display:block;font-size:22px;margin-bottom:3px}
+.empty{padding:50px 25px;text-align:center;color:#78827d}
+.profile{padding:28px 20px}.profile .avatar{width:90px;height:90px;font-size:30px;margin:0 auto 12px}.profile h2{text-align:center;margin:5px}.field{padding:15px;border-bottom:1px solid #edf0ee}
+.chatview{display:flex;flex-direction:column;height:calc(100vh - 78px)}.chathead{background:#0b8f55;color:#fff;padding:13px 15px;display:flex;align-items:center;gap:10px}.back{border:0;background:none;color:#fff;font-size:24px}.messages{flex:1;padding:15px;overflow:auto;background:#eef6f1}.bubble{max-width:78%;padding:9px 12px;border-radius:14px;margin:7px 0;font-size:14px}.in{background:white;border-top-left-radius:3px}.out{background:#c9f2db;margin-left:auto;border-top-right-radius:3px}.composer{display:flex;padding:9px;background:white;border-top:1px solid #ddd;gap:7px}.composer input{flex:1;border:1px solid #d7dfda;border-radius:22px;padding:11px 14px;outline:none}.send{border:0;background:#0b8f55;color:white;border-radius:50%;width:44px;height:44px}
+button{font:inherit}
+</style>
+</head>
+<body>
+<div class="app">
+<header id="homeHeader"><div class="brand">Deezat Chat</div><div class="tag">Chat • Connect • Share</div><div class="search">🔎 Search chats</div></header>
+<main>
+<section id="home" class="screen active">
+  <div id="chatList"></div>
+</section>
+<section id="status" class="screen">
+  <div class="empty"><div style="font-size:45px">◉</div><h3>Status</h3><p>Your status updates will appear here.</p></div>
+</section>
+<section id="profile" class="screen">
+  <div class="profile"><div class="avatar">IM</div><h2>My Profile</h2><div class="field">👤 Name<br><b>Deezat User</b></div><div class="field">📱 Phone<br><b>Not connected yet</b></div><div class="field">🔒 Privacy & Security</div><div class="field">🔔 Notifications</div></div>
+</section>
+<section id="conversation" class="screen">
+  <div class="chatview">
+    <div class="chathead"><button class="back" onclick="show('home')">‹</button><div class="avatar" id="convAvatar">A</div><div><b id="convName">Aisha</b><div style="font-size:11px">online</div></div></div>
+    <div id="messages" class="messages"></div>
+    <div class="composer"><input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="send" onclick="sendMsg()">➤</button></div>
+  </div>
+</section>
+</main>
+<nav class="bottom">
+<button class="nav active" data-screen="home" onclick="show('home')"><b>💬</b>Chats</button>
+<button class="nav" data-screen="status" onclick="show('status')"><b>◉</b>Status</button>
+<button class="nav" data-screen="profile" onclick="show('profile')"><b>👤</b>Profile</button>
+</nav>
+</div>
+<script>
+const seed=[
+ {name:"Aisha",msg:"Hi, how are you?",time:"10:24",n:2},
+ {name:"Usman",msg:"Photo",time:"09:58",n:0},
+ {name:"Fatima",msg:"Good morning",time:"08:45",n:0},
+ {name:"Abdullahi",msg:"Voice message (0:12)",time:"08:12",n:0},
+ {name:"Zainab",msg:"Okay",time:"Yesterday",n:0},
+ {name:"Musa",msg:"Thanks bro",time:"Yesterday",n:0}
+];
+let chats=JSON.parse(localStorage.getItem("deezatChats")||"null")||seed;
+let current="Aisha";
+let messages=JSON.parse(localStorage.getItem("deezatMessages")||"null")||{
+ Aisha:[["in","Hi, how are you?"],["out","I'm fine, thanks. How about you?"],["in","I'm good too. What are you doing now?"]]
+};
+function renderChats(){
+ const el=document.getElementById("chatList"); el.innerHTML="";
+ chats.forEach((c,i)=>{
+  el.innerHTML+=`<div class="chat" onclick="openChat('${c.name}')">
+   <div class="avatar">${c.name[0]}</div><div class="info"><div class="row"><span class="name">${c.name}</span><span class="time">${c.time}</span></div>
+   <div class="row"><span class="last">${c.msg}</span>${c.n?`<span class="badge">${c.n}</span>`:""}</div></div></div>`;
+ });
+}
+function show(id){
+ document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.screen===id));
+ document.getElementById("homeHeader").style.display=id==="home"?"block":"none";
+}
+function openChat(name){
+ current=name;
+ document.getElementById("convName").textContent=name;
+ document.getElementById("convAvatar").textContent=name[0];
+ if(!messages[name]) messages[name]=[["in","Hello 👋"]];
+ renderMessages(); show("conversation");
+}
+function renderMessages(){
+ const el=document.getElementById("messages");
+ el.innerHTML=(messages[current]||[]).map(m=>`<div class="bubble ${m[0]}">${escapeHtml(m[1])}</div>`).join("");
+ el.scrollTop=el.scrollHeight;
+}
+function sendMsg(){
+ const input=document.getElementById("msgInput"), t=input.value.trim(); if(!t)return;
+ (messages[current] ||= []).push(["out",t]); localStorage.setItem("deezatMessages",JSON.stringify(messages));
+ const c=chats.find(x=>x.name===current); if(c){c.msg=t;c.time="Now";c.n=0;localStorage.setItem("deezatChats",JSON.stringify(chats));}
+ input.value=""; renderMessages();
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+renderChats();
+</script>
+</body>
+</html>
